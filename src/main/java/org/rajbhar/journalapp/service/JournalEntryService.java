@@ -7,6 +7,7 @@ import org.rajbhar.journalapp.entity.User;
 import org.rajbhar.journalapp.repository.JournalEntryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,12 +28,19 @@ public class JournalEntryService {
     }
 
     //create service
+    @Transactional                                       //either full implement or all rollback
     public void saveEntry(JournalEntry journalEntry, String userName){
-        User user = userService.findByUserName(userName);
-        journalEntry.setDate(LocalDateTime.now());
-        JournalEntry saved = journalEntryRepository.save(journalEntry);              //save to journal-entries
-        user.getJournalEntries().add(saved);                                         //save to user's journal-entries
-        userService.saveEntry(user);                                                 //save entry of user in database
+        try{
+            User user = userService.findByUserName(userName);
+            journalEntry.setDate(LocalDateTime.now());
+            JournalEntry saved = journalEntryRepository.save(journalEntry);              //save to journal-entries
+            user.getJournalEntries().add(saved);                                         //save to user's journal-entries
+            //user.setUserName(null);                   //just for check atomicity of journal entries and user's journal entries
+            userService.saveEntry(user);                                                 //save entry of user in database
+        }catch(Exception e){
+            System.out.println("Error saving entry");
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     //save entry in journal
